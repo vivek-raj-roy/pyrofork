@@ -17,7 +17,7 @@
 #  You should have received a copy of the GNU Lesser General Public License
 #  along with Pyrogram.  If not, see <http://www.gnu.org/licenses/>.
 
-from typing import Optional, Union
+from typing import Optional
 
 import pyrogram
 from pyrogram import raw
@@ -28,34 +28,61 @@ class GetBusinessAccountStarBalance:
         self: "pyrogram.Client",
         business_connection_id: str,
     ) -> int:
-        """Return the amount of Telegram Stars owned by a managed business account.
+        """
+        Return the amount of Telegram Stars owned by a managed business account.
 
-        .. note::
-
-            Requires the `can_view_gifts_and_stars` business bot right.
-
-        .. include:: /_includes/usable-by/bots.rst
+        Requires the `can_view_gifts_and_stars` business bot right.
 
         Parameters:
             business_connection_id (``str``):
-                Unique identifier of business connection on behalf of which to send the request.
+                Unique identifier of business connection.
 
         Returns:
-            ``int``: On success, the current stars balance is returned.
-
-        Example:
-            .. code-block:: python
-
-                # Get stars balance
-                await app.get_business_account_star_balance("connection_id")
+            ``int``: Stars balance.
         """
-        connection_info = await self.get_business_connection(business_connection_id)
 
-        r = await self.invoke(
-            raw.functions.payments.GetStarsStatus(
-                peer=await self.resolve_peer(connection_info.user.id),
-            ),
-            business_connection_id=business_connection_id
+        # -----------------------------------------
+        # Step 1: Resolve business connection info
+        # -----------------------------------------
+        connection_info = await self.get_business_connection(
+            business_connection_id
         )
 
+        # -----------------------------------------
+        # Step 2: TEMPORARILY set business context
+        # (this is the REAL FIX)
+        # -----------------------------------------
+        _old_bc: Optional[str] = getattr(
+            self, "business_connection_id", None
+        )
+
+        self.business_connection_id = business_connection_id
+
+        try:
+            # -----------------------------------------
+            # Step 3: Invoke MTProto request
+            # -----------------------------------------
+            r = await self.invoke(
+                raw.functions.payments.GetStarsStatus(
+                    peer=await self.resolve_peer(
+                        connection_info.user.id
+                    ),
+                )
+            )
+
+        finally:
+            # -----------------------------------------
+            # Step 4: Restore previous context safely
+            # -----------------------------------------
+            if _old_bc is None:
+                try:
+                    delattr(self, "business_connection_id")
+                except AttributeError:
+                    pass
+            else:
+                self.business_connection_id = _old_bc
+
+        # -----------------------------------------
+        # Step 5: Return stars balance
+        # -----------------------------------------
         return r.balance.amount
