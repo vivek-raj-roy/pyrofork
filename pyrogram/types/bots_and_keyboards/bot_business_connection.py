@@ -75,7 +75,7 @@ class BotBusinessConnection(Object):
             user = await client.get_users(bot_connection.user_id),
             dc_id = bot_connection.dc_id,
             date = utils.timestamp_to_datetime(bot_connection.date),
-            can_reply = bot_connection.can_reply,
-            is_disabled = bot_connection.disabled,
+            can_reply = getattr(bot_connection, "can_reply", None),
+            is_disabled = getattr(bot_connection, "disabled", None),
             client=client
         )
