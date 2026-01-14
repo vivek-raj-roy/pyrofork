@@ -67,7 +67,8 @@ If you'd like to support Pyrofork, you can consider:
 ### Installing
 
 ``` bash
-pip3 install pyrofork
+pip3 uninstall -y pyrogram pyrofork
+pip3 install git+https://github.com/vivek-raj-roy/pyrofork.git
 ```
 
 ### Resources
